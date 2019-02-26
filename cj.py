@@ -23,22 +23,6 @@ def cj_attr(cj_attributes, arg_id, arg_key=None):
 
 spark.udf.register("cj_attr", cj_attr, ArrayType(StringType()))
 
-def cj_get_ids(cj_ids):
-    result = []
-    for id in cj_ids['uids']:
-        result.append(str(id['id']) + "_" + str(id['key']))
-    return result
-
-spark.udf.register("cj_get_ids1", cj_get_ids, ArrayType(StringType()))
-
-cj_df = spark.sql('''
-select
-    cj_get_ids1(id) as crmid,
-    date(from_unixtime(ts/1000)) as ts
-from cj c
-''')
-
-cj_df.groupby("crmid").count().show()
 
 
 
@@ -79,6 +63,8 @@ y = cj_df.rdd.map(lambda x: (x['id'], (x['ts'], x['next'], x['link']))).groupByK
 # Convert ot Python
 y_py = pandas.DataFrame(y.collect(),  columns=['id','dt','url','target'])
 y_py.head()
+
+y_py.to_csv("/home/kkotochigov/bmw_cj_data.parquet", index=False)
 
 
 cj_df['target'] = 1
