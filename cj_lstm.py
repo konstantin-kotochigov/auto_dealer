@@ -5,7 +5,6 @@ def get_link(raw_link):
 cj_df1 = spark.sql('''
 select
     cj_id(id, 10008, 10031)[0] as fpc,
-    cj_attr(attributes, 10035)[0] as device,
     substring(substring_index(substring_index(cj_attr(attributes, 10071)[0], '?', 1), '#', 1), 19, 100) as link,
     ts/1000 as ts
 from cj c
@@ -35,15 +34,7 @@ y = cj_df.select(['id','ts','next','link']).rdd.map(lambda x: (x['id'], (x['ts']
 y_py = pandas.DataFrame(y.collect(),  columns=['id','dt','url','target'])
 y_py.to_csv("/home/kkotochigov/bmw_cj_data.csv", index=False)
 
-def groupAttrs(r):
-    sortedList = sorted(r[1], key=lambda y: y[0])
-    deltas = [i for i, x in enumerate(sortedList[1]) if x == None or x > 4]
-    return [(r[0], dividedList[1][0:y+1], dividedList[2][0:y+1], 0 if dividedList[1][y]==None else 1) for y in deltas]
 
-# Import data in TransactionalFeatures format
-y = cj_df.select(['id','ts','next','link']).rdd.map(lambda x: (x['id'], (x['ts'], x['next'], x['link']))).groupByKey().flatMap(lambda x: groupAttrs(x))
-y_py = pandas.DataFrame(y.collect(),  columns=['id','dt','url','target'])
-y_py.to_csv("/home/kkotochigov/bmw_cj_data.csv", index=False)
 
 
 
