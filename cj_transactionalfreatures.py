@@ -2,7 +2,7 @@ def get_link(raw_link):
     return (substring(substring_index(substring_index(raw_link, '?', 1), '#', 1), 19, 100))
 
 # Get attributes from CJ data
-cj_df1 = spark.sql('''
+cj_df = spark.sql('''
 select
     cj_id(id, 10008, 10031)[0] as fpc,
     cj_attr(attributes, 10035)[0] as device,
