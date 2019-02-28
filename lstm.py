@@ -88,5 +88,5 @@ for cv in range(1):
     print(current_auc)
     auc.append(current_auc)
 
-print("average AUC = {}, std AUC = {}", numpy.mean(auc), numpy.std(auc))
+print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
 
