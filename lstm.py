@@ -1,5 +1,6 @@
 import keras
-from sklearn.model_selection import train_test_split
+import pandas
+from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 import numpy
 from sklearn.metrics import roc_auc_score
 import keras.preprocessing
@@ -14,7 +15,6 @@ from keras.models import Sequential, Model
 import keras.backend as K
 
 
-
 def get_data(data):
     data['dt'] = data.dt.apply(lambda x: list(x)[0:len(x)-1])
     data.loc[:, 'dt'] = data.dt.apply(lambda r: [0]*(32-len(r)) + r if pandas.notna(numpy.array(r).any()) else [0]*32 )
@@ -22,16 +22,12 @@ def get_data(data):
     Max = numpy.max(data.dt.apply(lambda r: numpy.max(r)))
     data.dt = data.dt.apply(lambda r: r / Max)
     data.dt = data.dt.apply(lambda r: r if len(r)==32 else r[-32:])
-    X_train, X_test, y_train, y_test = train_test_split(data, data.target)
-    tk = keras.preprocessing.text.Tokenizer()
+    tk = keras.preprocessing.text.Tokenizer(filters='', split=' ')
     tk.fit_on_texts(data.url.values)
-    urls_train = tk.texts_to_sequences(X_train.url)
-    urls_train = sequence.pad_sequences(urls_train, maxlen=32)
-    urls_test = tk.texts_to_sequences(X_test.url)
-    urls_test = sequence.pad_sequences(urls_test, maxlen=32)
-    dt_train = numpy.concatenate(X_train.dt.values).reshape((len(X_train), 32,1))
-    dt_test = numpy.concatenate(X_test.dt.values).reshape((len(X_test), 32,1))
-    return (urls_train, urls_test, dt_train, dt_test, y_train, y_test, tk)
+    urls = tk.texts_to_sequences(data.url)
+    urls = sequence.pad_sequences(urls, maxlen=32)
+    dt = numpy.concatenate(data.dt.values).reshape((len(data), 32, 1))
+    return (urls, dt, data['target'], tk)
 
 def create_network(tk):
     # architecure for Neuron Network
@@ -78,15 +74,27 @@ def create_network(tk):
                 metrics=['accuracy'])
     return return_model
 
-data = y_py[0:1000000].copy()
+data = pandas.read_parquet("/home/kkotochigov/bmw_cj_lstm.parquet")
 auc = []
-for cv in range(1):
-    urls_train, urls_test, dt_train, dt_test, y_train, y_test, tk = get_data(data)
-    model = create_network(tk)
-    model.fit([urls_train, dt_train], y_train, epochs=1, batch_size=1024, shuffle = True)
-    current_auc = roc_auc_score(y_test, model.predict([urls_test, dt_test]))
+urls, dt, y, tk = get_data(data)
+# train = ([urls_train, dt_train], y_train)
+# test = ([urls_test, dt_test], y_test)
+model = create_network(tk)
+
+cv_number = 0
+for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=10, test_size=0.25).split(y,y):
+#    print("train length = {}, test length = {}".format(len(cv_train_index), len(cv_test_index)))
+    cv_number += 1
+    print("CV number = {}".format(cv_number))
+    train = ([urls[cv_train_index], dt[cv_train_index]], y[cv_train_index])
+    test = ([urls[cv_test_index], dt[cv_test_index]], y[cv_test_index])
+    model.fit(train[0], train[1], epochs=1, batch_size=1024, shuffle = True)
+    current_auc = roc_auc_score(test[1], model.predict(test[0]))
     print(current_auc)
     auc.append(current_auc)
+
+scoring_data = [urls[data.target==0], dt[data.target==0]]
+model.predict()
 
 print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
 
