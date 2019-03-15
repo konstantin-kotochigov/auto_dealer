@@ -41,7 +41,7 @@ y_py = pandas.DataFrame(y.collect(),  columns=['id','dt','url','target'])
 y_py['url'] = y_py.url.apply(lambda x:" ".join(x))
 # y_py['dt'] = y_py.url.apply(lambda x:" ".join(x))
 
-# ToDO: convert Nones in dt and export to parquet
+# ToDO: convert Nones in dt and export to parquet instead of  CSV
 y_py.to_csv(output_file, index=False)
 
 

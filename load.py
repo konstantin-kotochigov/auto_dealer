@@ -16,3 +16,6 @@ time_to = int(time.mktime(datetime.datetime(2018, 12, 30).timetuple())) * 1000
 cj = cj_all.filter('ts > {} and ts < {}'.format(time_from, time_to))
 cj.createOrReplaceTempView('cj')
 
+CJ()
+cj.addParam("","")
+cj.readData()

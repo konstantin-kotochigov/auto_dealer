@@ -82,7 +82,7 @@ urls, dt, y, tk = get_data(data)
 model = create_network(tk)
 
 cv_number = 0
-for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=10, test_size=0.25).split(y,y):
+for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=1, test_size=0.25).split(y,y):
 #    print("train length = {}, test length = {}".format(len(cv_train_index), len(cv_test_index)))
     cv_number += 1
     print("CV number = {}".format(cv_number))
@@ -93,8 +93,13 @@ for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=10, test_si
     print(current_auc)
     auc.append(current_auc)
 
+train_data = ([urls, dt], y)
 scoring_data = [urls[data.target==0], dt[data.target==0]]
-model.predict()
+model.fit(train_data[0], train_data[1], epochs=1, batch_size=1024, shuffle = True)
+pred = model.predict(scoring_data)
+result = pandas.DataFrame({"id":data.id[data.target==0], "return_score":pred.reshape(-1)})
+
+result['return_score'] = pandas.cut(result.return_score, 5, labels=['1','2','3','4','5'])
 
 print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
 
