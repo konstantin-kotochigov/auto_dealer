@@ -23,3 +23,4 @@ def cj_attr(cj_attributes, arg_id, arg_key=None):
     return result
 
 spark.udf.register("cj_attr", cj_attr, ArrayType(StringType()))
+

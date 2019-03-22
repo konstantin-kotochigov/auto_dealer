@@ -74,32 +74,41 @@ def create_network(tk):
                 metrics=['accuracy'])
     return return_model
 
+# def main():
+#     import load
+#    import functions
+#    import cj_lstm
+#    import lstm
+#    import export
+#    return -1
+
 data = pandas.read_parquet("/home/kkotochigov/bmw_cj_lstm.parquet")
+# data1 = pandas.read_parquet("/home/kkotochigov/bmw_cj_lstm1.parquet")
 auc = []
 urls, dt, y, tk = get_data(data)
 # train = ([urls_train, dt_train], y_train)
 # test = ([urls_test, dt_test], y_test)
 model = create_network(tk)
 
-cv_number = 0
-for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=1, test_size=0.25).split(y,y):
+# cv_number = 0
+# for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=5, test_size=0.25).split(y,y):
 #    print("train length = {}, test length = {}".format(len(cv_train_index), len(cv_test_index)))
-    cv_number += 1
-    print("CV number = {}".format(cv_number))
-    train = ([urls[cv_train_index], dt[cv_train_index]], y[cv_train_index])
-    test = ([urls[cv_test_index], dt[cv_test_index]], y[cv_test_index])
-    model.fit(train[0], train[1], epochs=1, batch_size=1024, shuffle = True)
-    current_auc = roc_auc_score(test[1], model.predict(test[0]))
-    print(current_auc)
-    auc.append(current_auc)
+#     cv_number += 1
+#    print("CV number = {}".format(cv_number))
+#    train = ([urls[cv_train_index], dt[cv_train_index]], y[cv_train_index])
+#    test = ([urls[cv_test_index], dt[cv_test_index]], y[cv_test_index])
+#    model.fit(train[0], train[1], epochs=1, batch_size=1024, shuffle = True)
+#    current_auc = roc_auc_score(test[1], model.predict(test[0]))
+#    print(current_auc)
+#    auc.append(current_auc)
 
 train_data = ([urls, dt], y)
 scoring_data = [urls[data.target==0], dt[data.target==0]]
 model.fit(train_data[0], train_data[1], epochs=1, batch_size=1024, shuffle = True)
 pred = model.predict(scoring_data)
-result = pandas.DataFrame({"id":data.id[data.target==0], "return_score":pred.reshape(-1)})
+result = pandas.DataFrame({"fpc":data.fpc[data.target==0], "tpc":data.tpc[data.target==0], "return_score":pred.reshape(-1)})
 
 result['return_score'] = pandas.cut(result.return_score, 5, labels=['1','2','3','4','5'])
 
-print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
+# print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
 
