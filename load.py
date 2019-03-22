@@ -6,19 +6,24 @@ import datetime
 import time
 
 class cj_predictor:
+
     cj_path = ""
     cp_path = ""
     cj_data = None
     cj_attributes = None
+
     def __init__(self, spark):
         self.cj_path = ""
         self.cp_path = ""
         self.spark = spark
+
     def set_organization(self, org_uid="57efd33d-aaa5-409d-89ce-ff29a86d78a5"):
         self.cj_path = "/data/{}/.dmpkit/customer-journey/master/cdm".format(org_uid)
         self.cp_path = "/data/{}/.dmpkit/profiles/master/cdm".format(org_uid)
+
     def load_cj_all(self):
         self.cj_data = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
+
     def load_cj(self, ts_from, ts_to):
         cj_all = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
         time_from = int(time.mktime(datetime.datetime(ts_from[0],ts_from[1],ts_from[2]).timetuple())) * 1000

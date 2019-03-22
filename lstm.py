@@ -90,17 +90,17 @@ urls, dt, y, tk = get_data(data)
 # test = ([urls_test, dt_test], y_test)
 model = create_network(tk)
 
-# cv_number = 0
-# for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=5, test_size=0.25).split(y,y):
-#    print("train length = {}, test length = {}".format(len(cv_train_index), len(cv_test_index)))
-#     cv_number += 1
-#    print("CV number = {}".format(cv_number))
-#    train = ([urls[cv_train_index], dt[cv_train_index]], y[cv_train_index])
-#    test = ([urls[cv_test_index], dt[cv_test_index]], y[cv_test_index])
-#    model.fit(train[0], train[1], epochs=1, batch_size=1024, shuffle = True)
-#    current_auc = roc_auc_score(test[1], model.predict(test[0]))
-#    print(current_auc)
-#    auc.append(current_auc)
+cv_number = 0
+for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=1, test_size=0.25).split(y,y):
+    print("train length = {}, test length = {}".format(len(cv_train_index), len(cv_test_index)))
+    cv_number += 1
+    print("CV number = {}".format(cv_number))
+    train = ([urls[cv_train_index], dt[cv_train_index]], y[cv_train_index])
+    test = ([urls[cv_test_index], dt[cv_test_index]], y[cv_test_index])
+    model.fit(train[0], train[1], epochs=1, batch_size=1024, shuffle = True)
+    current_auc = roc_auc_score(test[1], model.predict(test[0]))
+    print(current_auc)
+    auc.append(current_auc)
 
 train_data = ([urls, dt], y)
 scoring_data = [urls[data.target==0], dt[data.target==0]]
