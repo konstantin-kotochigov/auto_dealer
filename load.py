@@ -118,6 +118,8 @@ class cj_predictor:
         self.cj_dataset.to_parquet(output_file, index=False)
 
 
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName('analytical_attributes').getOrCreate()
 cjp = cj_predictor(spark)
 cjp.register()
 cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
