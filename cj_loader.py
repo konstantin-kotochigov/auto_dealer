@@ -15,6 +15,10 @@ class CJ_Loader:
     cj_dataset = None
     cj_df = None
     
+    cj_data_rows = None
+    cj_df_rows = None
+    cj_dataset_rows = None
+    
     def __init__(self, spark):
         self.cj_path = ""
         self.cp_path = ""
@@ -28,16 +32,24 @@ class CJ_Loader:
     
     def load_cj_all(self):
         self.cj_data = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
+        self.cj_data_rows = self.cj_data.count()
+        print("Loaded CJ Rows = {}".format(self.cj_data_rows))
     
     def load_cj(self, ts_from, ts_to):
         cj_all = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
         time_from = int(time.mktime(datetime.datetime(ts_from[0],ts_from[1],ts_from[2]).timetuple())) * 1000
         time_to = int(time.mktime(datetime.datetime(ts_to[0], ts_to[1], ts_to[2]).timetuple())) * 1000
         self.cj_data = cj_all.filter('ts > {} and ts < {}'.format(time_from, time_to))
+        self.cj_data_rows = self.cj_data.count()
+        print("Loaded CJ Rows = {}".format(self.cj_data_rows))
         
-    def cj_stats(self):
+    def cj_stats(self, ts_from=(2000,1,1), ts_to=(2100,1,1)):
         cj_all = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
-        cj_all.selectExpr("from_unixtime(min(ts/1000)) as max_ts","from_unixtime(max(ts/1000)) as min_ts","count(*) as cnt").show()
+        time_from = int(time.mktime(datetime.datetime(ts_from[0],ts_from[1],ts_from[2]).timetuple())) * 1000
+        time_to = int(time.mktime(datetime.datetime(ts_to[0], ts_to[1], ts_to[2]).timetuple())) * 1000
+        cj_all = cj_all.filter('ts > {} and ts < {}'.format(time_from, time_to))
+        cj_all.selectExpr("date(from_unixtime(ts/1000)) as ts").groupBy("ts").count().orderBy("ts").show(100)
+        cj_all.selectExpr("date(from_unixtime(min(ts/1000))) as max_ts","date(from_unixtime(max(ts/1000))) as min_ts","count(*) as cnt").show()
         return -1
     
     @staticmethod
@@ -86,7 +98,8 @@ class CJ_Loader:
         cj_df_attrs.createOrReplaceTempView("cj_df_attrs")
         self.cj_df = cj_df_attrs.select("fpc","tpc","ts","next","link")
         
-        print("Extracted Rows (cj_df) = {}".format(self.cj_df.count()))
+        self.cj_df_rows = self.cj_df.count()
+        print("Extracted Rows (cj_df) = {}".format(self.cj_df_rows))
         
         return
     
@@ -113,6 +126,7 @@ class CJ_Loader:
         
         self.cj_dataset = y_py
         
-        print("Dataset of Processed Rows (cj_dataset) = {}".format(self.cj_dataset.count()))
+        self.cj_dataset_rows = self.cj_dataset.shape[0]
+        print("Dataset of Processed Rows (cj_dataset) = {}".format(self.cj_dataset_rows))
         
         return

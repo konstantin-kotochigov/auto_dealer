@@ -9,7 +9,7 @@ from avro.schema import Parse
 
 import os
 
-class DeltaMaker:
+class CJ_Export:
     def __init__(self, dmp_organization_id, source_name, hdfs_host, cp_schema_path, hdfs_user='hdfs'):
         self.cid = dmp_organization_id
         self.source = source_name

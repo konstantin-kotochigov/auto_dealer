@@ -1,6 +1,7 @@
 import pandas
 import numpy
 
+
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from sklearn.metrics import roc_auc_score
 
@@ -12,16 +13,18 @@ from keras.layers import Conv1D
 from keras.preprocessing import sequence
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, GaussianNoise
 from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 import keras.backend as K
 
-class CJ_Predictor():
+class CJ_Predictor:
     
     input_data = None
+    model_path = None
     return_model = None
     
-    def __init__(self):
-        print("Created Predictor Instance")
+    def __init__(self, model_path):
+        print("Created Predictor Instance With Working Dir = {}".format(model_path))
+        self.model_path = model_path
     
     def set_data(self, input_data):
         self.input_data = input_data
@@ -119,14 +122,18 @@ class CJ_Predictor():
         print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
     
     
-    def fit(self):
+    def fit(self, update_model):
         
         urls, dt, y, tk = self.preprocess_data()
         model = self.create_network(tk)
         
         train_data = ([urls, dt], y)
         scoring_data = [urls[self.input_data.target==0], dt[self.input_data.target==0]]
-        model.fit(train_data[0], train_data[1], epochs=1, batch_size=1024, shuffle = True)
+        if update_model:
+            model.fit(train_data[0], train_data[1], epochs=1, batch_size=1024, shuffle = True)
+            model.save_weights(self.model_path+"model.h5")
+        else:
+            model = load_model(self.model_path+"model.h5")
         pred = model.predict(scoring_data)
         self.result = pandas.DataFrame({"fpc":self.input_data.fpc[self.input_data.target==0], "tpc":self.input_data.tpc[self.input_data.target==0], "return_score":pred.reshape(-1)})
         
