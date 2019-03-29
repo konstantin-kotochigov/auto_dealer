@@ -1,6 +1,6 @@
 import pandas
 import numpy
-
+import os
 
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from sklearn.metrics import roc_auc_score
@@ -21,6 +21,8 @@ class CJ_Predictor:
     input_data = None
     model_path = None
     return_model = None
+    
+    train_auc = test_auc = test_auc_std = None
     
     def __init__(self, model_path):
         print("Created Predictor Instance With Working Dir = {}".format(model_path))
@@ -120,7 +122,14 @@ class CJ_Predictor:
             auc.append(current_auc)
         
         print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
+        
+        self.test_auc = numpy.mean(auc)
+        self.test_auc_std = numpy.std(auc)
+        
     
+    def load_model_hdfs(self):
+        
+        load_model(self.model_path+"model.h5")
     
     def fit(self, update_model):
         
@@ -129,14 +138,23 @@ class CJ_Predictor:
         
         train_data = ([urls, dt], y)
         scoring_data = [urls[self.input_data.target==0], dt[self.input_data.target==0]]
+        
         if update_model:
             model.fit(train_data[0], train_data[1], epochs=1, batch_size=1024, shuffle = True)
-            model.save_weights(self.model_path+"model.h5")
+            model.save_weights("model.h5")
+            os.system("HADOOP_USER_NAME=hdsf hadoop fs -copyFromLocal -f model.h5 /user/kkotochigov/models/model.h5")
         else:
-            model = load_model(self.model_path+"model.h5")
+            os.system("if [-f model.h5 ]; then rm model.h5; fi")
+            os.system("hadoop fs -copyToLocal /user/kkotochigov/models/model.h5 ./model.h5")
+            model.load_weights("model.h5")
+        
+         
         pred = model.predict(scoring_data)
         self.result = pandas.DataFrame({"fpc":self.input_data.fpc[self.input_data.target==0], "tpc":self.input_data.tpc[self.input_data.target==0], "return_score":pred.reshape(-1)})
+        self.train_auc = round(roc_auc_score(train_data[1], model.predict(train_data[0])), 2)
         
         self.result['return_score'] = pandas.cut(self.result.return_score, 5, labels=['1','2','3','4','5'])
+        
+        
         
         return self.result
