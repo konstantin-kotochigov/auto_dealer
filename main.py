@@ -28,7 +28,19 @@ import keras.backend as K
 
 def main():
     
-    send_update = True if len(sys.argv) >= 2 and (sys.argv[1]=="1") else False
+    if len(sys.argv) < 4:
+        raise Exception("command must have 3 arguments")
+    
+    # Specifies to Merge
+    send_update = True if sys.argv[1]=="send" else False
+    
+    # Overrides option to refit the model
+    arg_refit = True if sys.argv[2]=="refit" else False
+    
+    # Sets sample rate
+    arg_sample_rate = sys.argv[3]
+    
+    # send_update = True if len(sys.argv) >= 2 and (sys.argv[1]=="1") else False
     print("Send_update = {}".format(send_update))
     update_model_every = 60*24*7 # in seconds
     
@@ -42,7 +54,7 @@ def main():
     
     # Check whether We Need to Refit
     model_modification_ts = next(iter([x[1]['modificationTime'] for x in hdfs_client.list(wd+"models/", status=True) if x[0] == "model.h5"]), None)
-    model_needs_update = True if (model_modification_ts == None) or (time.time() - model_modification_ts > update_model_every) else False
+    model_needs_update = True if (model_modification_ts == None) or (time.time() - model_modification_ts > update_model_every) or (arg_refit) else False
     print("Refit = {}".format(model_needs_update))
     
     # Load Data
