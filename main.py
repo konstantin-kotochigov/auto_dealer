@@ -48,8 +48,8 @@ def main():
     # Load Data
     cjp = CJ_Loader(spark)
     cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
-    cjp.load_cj(ts_from=(2018,12,11), ts_to=(2018,12,12))
-    # cjp.cj_stats(ts_from=(2018,12,1), ts_to=(2018,12,31))
+    cjp.load_cj(ts_from=(2010,1,1), ts_to=(2020,1,1))
+    # cjp.cj_stats(ts_from=(2010,12,1), ts_to=(2020,12,31))
     cjp.cj_data.createOrReplaceTempView('cj')
     cjp.extract_attributes()
     cjp.process_attributes()
@@ -64,6 +64,7 @@ def main():
     result = predictor.fit(update_model=model_needs_update)
     
     print("Got Result Table with Rows = {}".format(result.shape[0]))
+    print("Score Distribution = \n{}".format(result.return_score.value_counts(sort=False)))
     
     
     

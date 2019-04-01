@@ -125,11 +125,6 @@ class CJ_Predictor:
         
         self.test_auc = numpy.mean(auc)
         self.test_auc_std = numpy.std(auc)
-        
-    
-    def load_model_hdfs(self):
-        
-        load_model(self.model_path+"model.h5")
     
     def fit(self, update_model):
         
@@ -144,9 +139,10 @@ class CJ_Predictor:
             model.save_weights("model.h5")
             os.system("HADOOP_USER_NAME=hdsf hadoop fs -copyFromLocal -f model.h5 /user/kkotochigov/models/model.h5")
         else:
-            os.system("if [-f model.h5 ]; then rm model.h5; fi")
+            os.system("rm -f model.h5")
             os.system("hadoop fs -copyToLocal /user/kkotochigov/models/model.h5 ./model.h5")
             model.load_weights("model.h5")
+            print("Using Stored Model Weights")
         
          
         pred = model.predict(scoring_data)
