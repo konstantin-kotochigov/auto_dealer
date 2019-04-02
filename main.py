@@ -2,6 +2,8 @@ import sys
 from pyspark.sql import SparkSession
 from hdfs import InsecureClient
 
+from sklearn.model_selection import StratifiedShuffleSplit
+
 import time
 import datetime
 
@@ -67,16 +69,22 @@ def main():
     cjp.process_attributes()
     data = cjp.cj_dataset
     
+    # Sample Dataset to Reduce Processing Time
+    if arg_sample_rate != 1.0:
+        data = StratifiedShuffleSplit(n_splits=1, train_size=arg_sample_rate).get_n_splits(data, data.target)
+    
     # Make Model
     predictor = CJ_Predictor(wd+"models/")
     predictor.set_data(data)
-    # predictor.optimize()
+    # predictor.optimize(
     
-    print("Update Model = {}".format(model_needs_update))
+    start_fitting = time.time()
     result = predictor.fit(update_model=model_needs_update)
     
+    scoring_distribution = result.return_score.value_counts(sort=False)
+    
     print("Got Result Table with Rows = {}".format(result.shape[0]))
-    print("Score Distribution = \n{}".format(result.return_score.value_counts(sort=False)))
+    print("Score Distribution = \n{}".format(scoring_distribution))
     
     
     
@@ -113,7 +121,7 @@ def main():
     print("Send Update To Production = {}".format(send_update))
     dm.make_delta(df, mapping, send_update=send_update)
     
-    finish_processing = time.time()
+    finish_fitting = time.time()
     
     # Store Run Metadata
     log_data = [datetime.datetime.today().strftime('%Y-%m-%d %H-%m'),
@@ -122,17 +130,23 @@ def main():
         str(cjp.cj_dataset_rows),
         str(model_needs_update),
         str(send_update),
-        str(round((finish_processing - start_processing)/60, 2)),
+        str(round((start_fitting - start_processing)/60, 2)),
+        str(round((finish_fitting - start_fitting)/60, 2)),
         str(predictor.train_auc),
         str(predictor.test_auc),
-        str(predictor.test_auc_std)
+        str(predictor.test_auc_std),
+        str(scoring_distribution[1]),
+        str(scoring_distribution[2]),
+        str(scoring_distribution[3]),
+        str(scoring_distribution[4]),
+        str(scoring_distribution[5])
     ]
     log = ";".join(log_data)
     
     log_path = wd+"log/log.csv"
     
     if "log.csv" not in hdfs_client.list(wd+"log/"):
-        data_with_header = 'dt;loaded_rows;extracted_rows;processed_rows;refit;send_to_prod;processing_time;train_auc;test_auc;test_auc_std\n'+log + "\n"
+        data_with_header = 'dt;loaded_rows;extracted_rows;processed_rows;refit;send_to_prod;processing_time;fitting_time;train_auc;test_auc;test_auc_std;q1;q2;q3;q4;q5\n'+log + "\n"
         hdfs_client.write(log_path, data=bytes(data_with_header, encoding='utf8'), overwrite=True)
     else:
             with hdfs_client.read(log_path) as reader:
