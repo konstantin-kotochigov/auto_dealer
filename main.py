@@ -51,7 +51,7 @@ def main():
     # Common classes
     spark = SparkSession.builder.appName('analytical_attributes').getOrCreate()
     wd = "/user/kkotochigov/"
-    hdfs_client = InsecureClient("http://159.69.60.183:50070", "hdfs")
+    hdfs_client = InsecureClient("http://159.69.60.71:50070", "hdfs")
     
     
     # Check whether We Need to Refit
@@ -62,24 +62,24 @@ def main():
     # Load Data
     cjp = CJ_Loader(spark)
     cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
-    cjp.load_cj(ts_from=(2010,1,1), ts_to=(2020,1,1))
+    cjp.load_cj(ts_from=(2010,12,10), ts_to=(2020,12,12))
     # cjp.cj_stats(ts_from=(2010,12,1), ts_to=(2020,12,31))
     cjp.cj_data.createOrReplaceTempView('cj')
     cjp.extract_attributes()
-    cjp.process_attributes()
+    cjp.process_attributes(features_mode="seq", split_mode="all")
     data = cjp.cj_dataset
     
     # Sample Dataset to Reduce Processing Time
-    if arg_sample_rate != 1.0:
-        data = StratifiedShuffleSplit(n_splits=1, train_size=arg_sample_rate).get_n_splits(data, data.target)
+    # if arg_sample_rate != 1.0:
+    #     (train_index, test_index) = StratifiedShuffleSplit(n_splits=1, train_size=arg_sample_rate).get_n_splits(data, data.target)
     
     # Make Model
     predictor = CJ_Predictor(wd+"models/")
     predictor.set_data(data)
-    # predictor.optimize(
+    predictor.optimize()
     
     start_fitting = time.time()
-    result = predictor.fit(update_model=model_needs_update)
+    result = predictor.fit(update_model=model_needs_update, batch_size=4096)
     
     scoring_distribution = result.return_score.value_counts(sort=False)
     
@@ -90,7 +90,7 @@ def main():
     
     # Make Delta
     df = spark.createDataFrame(result)
-    dm = CJ_Export("57efd33d-aaa5-409d-89ce-ff29a86d78a5", "model_update", "http://159.69.60.183:50070", "schema.avsc")
+    dm = CJ_Export("57efd33d-aaa5-409d-89ce-ff29a86d78a5", "model_update", "http://159.69.60.71:50070", "schema.avsc")
     
     mapping = {
         'id': {
@@ -135,11 +135,11 @@ def main():
         str(predictor.train_auc),
         str(predictor.test_auc),
         str(predictor.test_auc_std),
+        str(scoring_distribution[0]),
         str(scoring_distribution[1]),
         str(scoring_distribution[2]),
         str(scoring_distribution[3]),
-        str(scoring_distribution[4]),
-        str(scoring_distribution[5])
+        str(scoring_distribution[4])
     ]
     log = ";".join(log_data)
     

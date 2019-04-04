@@ -1,4 +1,5 @@
 import pandas
+import numpy
 import time
 import datetime
 
@@ -29,11 +30,13 @@ class CJ_Loader:
     def set_organization(self, org_uid="57efd33d-aaa5-409d-89ce-ff29a86d78a5"):
         self.cj_path = "/data/{}/.dmpkit/customer-journey/master/cdm".format(org_uid)
         self.cp_path = "/data/{}/.dmpkit/profiles/master/cdm".format(org_uid)
+        print("Setting CJ Data Path To: {}".format(self.cj_path))
+        print("Setting CP Data Path To: {}".format(self.cj_path))
     
     def load_cj_all(self):
         self.cj_data = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
         self.cj_data_rows = self.cj_data.count()
-        print("Loaded CJ Rows = {}".format(self.cj_data_rows))
+        print("Loaded CJ Rows (Full) = {}".format(self.cj_data_rows))
     
     def load_cj(self, ts_from, ts_to):
         cj_all = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
@@ -42,7 +45,7 @@ class CJ_Loader:
         self.cj_data = cj_all.filter('ts > {} and ts < {}'.format(time_from, time_to))
         self.cj_data_rows = self.cj_data.count()
         print("Loaded CJ Rows = {}".format(self.cj_data_rows))
-        
+    
     def cj_stats(self, ts_from=(2000,1,1), ts_to=(2100,1,1)):
         cj_all = self.spark.read.format("com.databricks.spark.avro").load(self.cj_path)
         time_from = int(time.mktime(datetime.datetime(ts_from[0],ts_from[1],ts_from[2]).timetuple())) * 1000
@@ -104,18 +107,67 @@ class CJ_Loader:
         return
     
     
-    def process_attributes(self):
+    def process_attributes(self, return_window=30, features_mode='seq', split_mode='all', split_dt=None):
     
-        # Create Records
-        def groupAttrs(r):
-            sortedList = sorted(r[1], key=lambda y: y[0])
+        sessions_upper_bound = time.time() - return_window*24*60*60
+        
+        print("Using Return Window = {} days".format(return_window))
+        print("Right Bound = {}".format(datetime.datetime.fromtimestamp(sessions_upper_bound).strftime("%Y-%m-%d")))
+    
+        # Function to make a Row out of a sequence
+        def process_sequence1(id, event_sequence, session_close_event_num):
+            return (
+                id,                                                               # FPC
+                event_sequence[3][session_close_event_num],                       # TPC
+                event_sequence[1][0:session_close_event_num+1],                   # deltas
+                event_sequence[2][0:session_close_event_num+1],                   # urls
+                0 if event_sequence[1][session_close_event_num] == None else 1,   # Target
+                event_sequence[0][session_close_event_num]                        # TS
+            )
+        
+        # Function to convert sequence of events into feature vector
+        def process_sequence2(id, event_sequence, session_close_event_num):
+            f1 = numpy.avg(event_sequence[0:session_close_event_num+1])
+            f2 = numpy.min(event_sequence[0:session_close_event_num+1])
+            f3 = f4 = f5 = 0
+            return (id, f1, f2, f3, f4, f5)
+    
+        # Create Multiple Session Records
+        def groupAttrs(grouped_row, features_mode, split_mode):
+        
+            customer_id = grouped_row[0]
+            
+            # Sort By TS
+            sortedList = sorted(grouped_row[1], key=lambda y: y[0])
+            
+            # Divide event attributes into separate lists
             dividedList = list(zip(*sortedList))
-            # dt = [x[0] for x in sortedList]
-            deltas = [i for i, x in enumerate(dividedList[1]) if x == None or x > 4]
-            return [(r[0], dividedList[3][y], dividedList[1][0:y+1], dividedList[2][0:y+1], 0 if dividedList[1][y]==None else 1) for y in deltas]
+            deltas = dividedList[1]
+            timestamps = dividedList[0]
+            
+            # Choose Session boundaries
+            if split_mode == "all":
+                # We seek large deltas and mark those points as session ends
+                session_coordinates = [i for i, x in enumerate(deltas) if x == None or x > 4]
+            else:
+                # We got one splitting point and generate one row preceding this TS
+                session_coordinates = [max([i for i,x in enumerate(timestamps) if x < split_dt])]
+                
+            # Choose a Function For Feature Generation
+            if features_mode == "seq":
+                process_function = process_sequence1
+            else:
+                process_function = process_sequence2
+            
+            return [process_function(customer_id, dividedList, session_close_event_num) for session_close_event_num in session_coordinates]
+            
         
         # Slice By User
-        y = self.cj_df.select(['fpc','tpc','ts','next','link']).rdd.map(lambda x: (x['fpc'], (x['ts'], x['next'], x['link'], x['tpc']))).groupByKey().flatMap(lambda x: groupAttrs(x))
+        y = self.\
+            cj_df.\
+            select(['fpc','tpc','ts','next','link']).rdd.map(lambda x: (x['fpc'], (x['ts'], x['next'], x['link'], x['tpc']))).\
+            groupByKey().\
+            flatMap(lambda x: groupAttrs(x, features_mode, split_mode)).filter(lambda x: x[5] < sessions_upper_bound).map(lambda x: x[0:4])
         
         # Convert To Pandas dataframe
         y_py = pandas.DataFrame(y.collect(),  columns=['fpc','tpc','dt','url','target'])

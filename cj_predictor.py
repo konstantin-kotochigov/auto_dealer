@@ -1,5 +1,6 @@
 import pandas
 import numpy
+import random
 import os
 
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
@@ -103,20 +104,19 @@ class CJ_Predictor:
     # data = pandas.read_parquet("/home/kkotochigov/bmw_cj_lstm.parquet")
     # data1 = pandas.read_parquet("/home/kkotochigov/bmw_cj_lstm1.parquet")
     
-    def optimize(self):
+    def optimize(self, batch_size):
         
         auc = []
         urls, dt, y, tk = self.preprocess_data()
         model = self.create_network(tk)
         
         cv_number = 0
-        for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=1, test_size=0.25).split(y,y):
-            print("train length = {}, test length = {}".format(len(cv_train_index), len(cv_test_index)))
+        for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=5, train_size=0.25, test_size=0.10).split(y,y):
             cv_number += 1
-            print("CV number = {}".format(cv_number))
+            print("Fitting Model (CV={}) train length = {}, test length = {}".format(cv_number, len(cv_train_index), len(cv_test_index)))
             train = ([urls[cv_train_index], dt[cv_train_index]], y[cv_train_index])
             test = ([urls[cv_test_index], dt[cv_test_index]], y[cv_test_index])
-            model.fit(train[0], train[1], epochs=1, batch_size=1024, shuffle = True)
+            model.fit(train[0], train[1], epochs=1, batch_size=batch_size, shuffle = True)
             current_auc = roc_auc_score(test[1], model.predict(test[0]))
             print(current_auc)
             auc.append(current_auc)
@@ -126,7 +126,7 @@ class CJ_Predictor:
         self.test_auc = numpy.mean(auc)
         self.test_auc_std = numpy.std(auc)
     
-    def fit(self, update_model):
+    def fit(self, update_model, batch_size):
         
         urls, dt, y, tk = self.preprocess_data()
         model = self.create_network(tk)
@@ -135,7 +135,7 @@ class CJ_Predictor:
         scoring_data = [urls[self.input_data.target==0], dt[self.input_data.target==0]]
         
         if update_model:
-            model.fit(train_data[0], train_data[1], epochs=1, batch_size=1024, shuffle = True)
+            model.fit(train_data[0], train_data[1], epochs=1, batch_size=batch_size, shuffle = True)
             model.save_weights("model.h5")
             os.system("HADOOP_USER_NAME=hdsf hadoop fs -copyFromLocal -f model.h5 /user/kkotochigov/models/model.h5")
         else:
@@ -147,7 +147,7 @@ class CJ_Predictor:
          
         pred = model.predict(scoring_data)
         self.result = pandas.DataFrame({"fpc":self.input_data.fpc[self.input_data.target==0], "tpc":self.input_data.tpc[self.input_data.target==0], "return_score":pred.reshape(-1)})
-        self.train_auc = round(roc_auc_score(train_data[1], model.predict(train_data[0])), 2)
+        self.train_auc = round(roc_auc_score(train_data[1], model.predict(train_data[0], batch_size=batch_size)), 2)
         
         self.result['return_score'] = pandas.cut(self.result.return_score, 5, labels=['1','2','3','4','5'])
         
