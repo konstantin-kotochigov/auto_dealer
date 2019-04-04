@@ -62,7 +62,7 @@ def main():
     # Load Data
     cjp = CJ_Loader(spark)
     cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
-    cjp.load_cj(ts_from=(2010,12,10), ts_to=(2020,12,12))
+    cjp.load_cj(ts_from=(2018,12,10), ts_to=(2018,12,12))
     # cjp.cj_stats(ts_from=(2010,12,1), ts_to=(2020,12,31))
     cjp.cj_data.createOrReplaceTempView('cj')
     cjp.extract_attributes()
