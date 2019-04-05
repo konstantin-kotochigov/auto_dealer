@@ -2,29 +2,12 @@ import sys
 from pyspark.sql import SparkSession
 from hdfs import InsecureClient
 
-from sklearn.model_selection import StratifiedShuffleSplit
-
 import time
 import datetime
 
 from cj_loader import CJ_Loader
 from cj_predictor import CJ_Predictor
 from cj_export import CJ_Export
-
-
-
-import keras
-import keras.preprocessing
-from keras.layers import Concatenate
-from keras.layers import MaxPooling1D
-from keras.layers import Embedding, LSTM, Dense, PReLU, Dropout, BatchNormalization
-from keras.layers import Conv1D
-from keras.preprocessing import sequence
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, GaussianNoise
-from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D
-from keras.models import Sequential, Model
-import keras.backend as K
-
 
 
 
@@ -62,7 +45,8 @@ def main():
     # Load Data
     cjp = CJ_Loader(spark)
     cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
-    cjp.load_cj(ts_from=(2018,12,10), ts_to=(2018,12,12))
+    cjp.load_cj(ts_from=(2010,12,10), ts_to=(2020,12,12))
+    # cjp.load_cj(ts_from=(2018,12,10), ts_to=(2018,12,12))
     # cjp.cj_stats(ts_from=(2010,12,1), ts_to=(2020,12,31))
     cjp.cj_data.createOrReplaceTempView('cj')
     cjp.extract_attributes()
@@ -76,7 +60,7 @@ def main():
     # Make Model
     predictor = CJ_Predictor(wd+"models/")
     predictor.set_data(data)
-    predictor.optimize()
+    predictor.optimize(batch_size=4096)
     
     start_fitting = time.time()
     result = predictor.fit(update_model=model_needs_update, batch_size=4096)

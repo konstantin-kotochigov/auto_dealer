@@ -123,8 +123,8 @@ class CJ_Predictor:
         
         print("average AUC = {}, std AUC = {}".format(numpy.mean(auc), numpy.std(auc)))
         
-        self.test_auc = numpy.mean(auc)
-        self.test_auc_std = numpy.std(auc)
+        self.test_auc = round(numpy.mean(auc), 5)
+        self.test_auc_std = round(numpy.std(auc), 5)
     
     def fit(self, update_model, batch_size):
         

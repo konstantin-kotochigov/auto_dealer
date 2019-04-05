@@ -167,7 +167,7 @@ class CJ_Loader:
             cj_df.\
             select(['fpc','tpc','ts','next','link']).rdd.map(lambda x: (x['fpc'], (x['ts'], x['next'], x['link'], x['tpc']))).\
             groupByKey().\
-            flatMap(lambda x: groupAttrs(x, features_mode, split_mode)).filter(lambda x: x[5] < sessions_upper_bound).map(lambda x: x[0:4])
+            flatMap(lambda x: groupAttrs(x, features_mode, split_mode)).filter(lambda x: x[5] < sessions_upper_bound).map(lambda x: x[0:5])
         
         # Convert To Pandas dataframe
         y_py = pandas.DataFrame(y.collect(),  columns=['fpc','tpc','dt','url','target'])
