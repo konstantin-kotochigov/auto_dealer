@@ -1,5 +1,7 @@
 import pandas
 import numpy
+import pickle
+import json
 import random
 import os
 
@@ -23,27 +25,46 @@ class CJ_Predictor:
     model_path = None
     return_model = None
     
+    model_path = None
+    vocabulary_path = None
+    model_weights_path = None
+    
     train_auc = test_auc = test_auc_std = None
     
-    def __init__(self, model_path):
+    def __init__(self, model_path, hdfs_client):
         print("Created Predictor Instance With Working Dir = {}".format(model_path))
         self.model_path = model_path
+        self.vocabulary_path = model_path + "/vocabulary.pkl"
+        self.model_weights_path = model_path + "/model.pkl"
+        self.hdfs_client = hdfs_client
     
     def set_data(self, input_data):
         self.input_data = input_data
     
-    def preprocess_data(self):
+    def preprocess_data(self, model_update):
+    
         data = self.input_data
+        
+        # Preprocess "TS Deltas" Sequence
         data['dt'] = data.dt.apply(lambda x: list(x)[0:len(x)-1])
         data.loc[:, 'dt'] = data.dt.apply(lambda r: [0]*(32-len(r)) + r if pandas.notna(numpy.array(r).any()) else [0]*32 )
         data.dt = data.dt.apply(lambda r: numpy.log(numpy.array(r)+1))
         Max = numpy.max(data.dt.apply(lambda r: numpy.max(r)))
         data.dt = data.dt.apply(lambda r: r / Max)
         data.dt = data.dt.apply(lambda r: r if len(r)==32 else r[-32:])
-        tk = keras.preprocessing.text.Tokenizer(filters='', split=' ')
-        tk.fit_on_texts(data.url.values)
+        
+        # Preprocess Urls Sequence
+        if model_update==True:
+            tk = keras.preprocessing.text.Tokenizer(filters='', split=' ')
+            tk.fit_on_texts(data.url.values)
+            self.hdfs_client.write(self.vocabulary_path, data=pickle.dumps(tk), overwrite=True)
+        else:
+            with self.hdfs_client.read(self.vocabulary_path) as reader:
+                tk = pickle.loads(reader.read())
+            
         urls = tk.texts_to_sequences(data.url)
         urls = sequence.pad_sequences(urls, maxlen=32)
+        
         dt = numpy.concatenate(data.dt.values).reshape((len(data), 32, 1))
         return (urls, dt, data['target'], tk)
     
@@ -107,7 +128,7 @@ class CJ_Predictor:
     def optimize(self, batch_size):
         
         auc = []
-        urls, dt, y, tk = self.preprocess_data()
+        urls, dt, y, tk = self.preprocess_data(update_model = True)
         model = self.create_network(tk)
         
         cv_number = 0
@@ -128,7 +149,7 @@ class CJ_Predictor:
     
     def fit(self, update_model, batch_size):
         
-        urls, dt, y, tk = self.preprocess_data()
+        urls, dt, y, tk = self.preprocess_data(update_model)
         model = self.create_network(tk)
         
         train_data = ([urls, dt], y)
@@ -136,15 +157,12 @@ class CJ_Predictor:
         
         if update_model:
             model.fit(train_data[0], train_data[1], epochs=1, batch_size=batch_size, shuffle = True)
-            model.save_weights("model.h5")
-            os.system("HADOOP_USER_NAME=hdsf hadoop fs -copyFromLocal -f model.h5 /user/kkotochigov/models/model.h5")
+            self.hdfs_client.write(self.model_weights_path, pickle.dumps(model), overwrite=True)
         else:
-            os.system("rm -f model.h5")
-            os.system("hadoop fs -copyToLocal /user/kkotochigov/models/model.h5 ./model.h5")
-            model.load_weights("model.h5")
-            print("Using Stored Model Weights")
+            with self.hdfs_client.read(self.model_weights_path) as reader:
+                model = pickle.loads(reader.read())
         
-         
+        print("Scoring Data...")
         pred = model.predict(scoring_data)
         self.result = pandas.DataFrame({"fpc":self.input_data.fpc[self.input_data.target==0], "tpc":self.input_data.tpc[self.input_data.target==0], "return_score":pred.reshape(-1)})
         self.train_auc = round(roc_auc_score(train_data[1], model.predict(train_data[0], batch_size=batch_size)), 2)
