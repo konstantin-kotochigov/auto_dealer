@@ -38,7 +38,7 @@ def main():
     
     
     # Check whether We Need to Refit
-    model_modification_ts = next(iter([x[1]['modificationTime'] for x in hdfs_client.list(wd+"models/", status=True) if x[0] == "model.h5"]), None)
+    model_modification_ts = next(iter([x[1]['modificationTime'] for x in hdfs_client.list(wd+"models/", status=True) if x[0] == "model.pkl"]), None)
     model_needs_update = True if (model_modification_ts == None) or (time.time() - model_modification_ts > update_model_every) or (arg_refit) else False
     print("Refit = {}".format(model_needs_update))
     
@@ -46,7 +46,7 @@ def main():
     cjp = CJ_Loader(spark)
     cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
     # cjp.load_cj(ts_from=(2010,12,10), ts_to=(2020,12,12))
-    cjp.load_cj(ts_from=(2018,12,10), ts_to=(2018,12,12))
+    cjp.load_cj(ts_from=(2018,12,1), ts_to=(2018,12,31))
     # cjp.cj_stats(ts_from=(2010,12,1), ts_to=(2020,12,31))
     cjp.cj_data.createOrReplaceTempView('cj')
     cjp.extract_attributes()
@@ -60,7 +60,7 @@ def main():
     # Make Model
     predictor = CJ_Predictor(wd+"models/", hdfs_client)
     predictor.set_data(data)
-    # predictor.optimize(batch_size=4096)
+    predictor.optimize(batch_size=4096)
     
     start_fitting = time.time()
     result = predictor.fit(update_model=model_needs_update, batch_size=4096)

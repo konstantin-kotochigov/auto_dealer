@@ -12,9 +12,9 @@ PYSPARK_PYTHON=./venv/bin/python spark2-submit --master yarn --deploy-mode clust
  --conf "spark.yarn.executor.memoryOverhead=10g" \
  --conf "spark.kryoserializer.buffer.max=2047m" \
  --conf "spark.driver.maxResultSize=10g" \
- --conf "spark.rpc.maxSize=1g"
+ --conf "spark.rpc.maxSize=1g" \
  --conf "spark.driver.cores=4" \
  --files schema.avsc \
  --py-files "cj_loader.py,cj_predictor.py,cj_export.py" \
  --name "analytic_attributes" \
- main.py nosend refit 0.25
+ main.py nosend refit_auto 0.25
