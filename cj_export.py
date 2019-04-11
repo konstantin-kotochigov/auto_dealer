@@ -2,6 +2,7 @@ from hdfs import InsecureClient
 from uuid import uuid4
 import time
 import os
+import json
 
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter

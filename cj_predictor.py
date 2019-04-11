@@ -69,141 +69,27 @@ class CJ_Predictor:
         return (urls, dt, data['target'], tk)
     
     def create_network(self, tk):
-        # architecure for Neuron Network
-        max_len = 32
-        SEQUENCE_LENGTH = 128
-        EMBEDDING_DIM = 64
-        input_1 = Input(shape=(32,))
-        model_1 = Embedding(len(tk.word_index)+1, EMBEDDING_DIM,
-                           input_length=max_len, trainable=True)(input_1)
-        model_1 = (Conv1D(64, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = (Conv1D(64, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = (Conv1D(128, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = Reshape((128,4))(model_1)
-        model_1 = LSTM(units = SEQUENCE_LENGTH, dropout_W=0.2, dropout_U=0.2,
-                         return_sequences=True )(model_1)
-        model_1 = LSTM(32, dropout_W=0.2, dropout_U=0.2)(model_1)
-        input_2 = Input(shape=(32,1))
-        model_2 = LSTM(units = SEQUENCE_LENGTH, dropout_W=0.2, dropout_U=0.2,
-                         return_sequences=True )(input_2)
-        model_2 = LSTM(32, dropout_W=0.2, dropout_U=0.2)(model_2)
-        model_3 = Concatenate(axis=-1)([model_1, model_2])
-        model_3 = Dense(32)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(16)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(8)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(1)(model_3)
-        model_3 = Activation('sigmoid')(model_3)
-        return_model = Model(inputs=[input_1, input_2], outputs=model_3)
-        def mean_pred(y_true, y_pred):
-            return K.mean(y_pred)
-        return_model.compile(loss='binary_crossentropy',
-                    optimizer='Adam',
-                    metrics=['accuracy'])
-        self.return_model = return_model
-        return return_model
+    
+        input_layer1 = Input(shape=(32,))
+        layer11 = Embedding(len(tk.word_index)+1, 4, input_length=32, trainable=True)(input_layer1)
+        layer12 = LSTM(16, dropout_W=0.2, dropout_U=0.2, return_sequences=False)(layer11)
         
-    def create_network1(self, tk):
-        # architecure for Neuron Network
-        max_len = 32
-        SEQUENCE_LENGTH = 128
-        EMBEDDING_DIM = 64
-        input_1 = Input(shape=(32,))
-        model_1 = Embedding(len(tk.word_index)+1, EMBEDDING_DIM,
-                           input_length=max_len, trainable=True)(input_1)
-        model_1 = (Conv1D(64, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = (Conv1D(64, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = (Conv1D(128, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = Reshape((128,4))(model_1)
-        model_1 = LSTM(units = SEQUENCE_LENGTH, dropout_W=0.2, dropout_U=0.2,
-                         return_sequences=True )(model_1)
-        model_1 = LSTM(32, dropout_W=0.2, dropout_U=0.2)(model_1)
-        input_2 = Input(shape=(32,1))
-        model_2 = LSTM(units = SEQUENCE_LENGTH, dropout_W=0.2, dropout_U=0.2,
-                         return_sequences=True )(input_2)
-        model_2 = LSTM(32, dropout_W=0.2, dropout_U=0.2)(model_2)
-        model_3 = Concatenate(axis=-1)([model_1, model_2])
-        model_3 = Dense(32)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(16)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(8)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(1)(model_3)
-        model_3 = Activation('sigmoid')(model_3)
-        return_model = Model(inputs=[input_1, input_2], outputs=model_3)
-        def mean_pred(y_true, y_pred):
-            return K.mean(y_pred)
-        return_model.compile(loss='binary_crossentropy',
-                    optimizer='Adam',
-                    metrics=['accuracy'])
-        self.return_model = return_model
-        return return_model
+        input_layer2 = Input(shape=(32,1))
+        layer21 = LSTM(16, dropout_W=0.2, dropout_U=0.2, return_sequences=False)(input_layer2)
         
-    def create_network2(self, tk):
-        # architecure for Neuron Network
-        max_len = 32
-        SEQUENCE_LENGTH = 128
-        EMBEDDING_DIM = 64
-        input_1 = Input(shape=(32,))
-        model_1 = Embedding(len(tk.word_index)+1, EMBEDDING_DIM,
-                           input_length=max_len, trainable=True)(input_1)
-        model_1 = (Conv1D(64, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = (Conv1D(64, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = (Conv1D(128, (3), activation='relu', padding='same'))(model_1)
-        model_1 = MaxPooling1D((2), padding='same')(model_1)
-        model_1 = Reshape((128,4))(model_1)
-        model_1 = LSTM(units = SEQUENCE_LENGTH, dropout_W=0.2, dropout_U=0.2,
-                         return_sequences=True )(model_1)
-        model_1 = LSTM(32, dropout_W=0.2, dropout_U=0.2)(model_1)
-        input_2 = Input(shape=(32,1))
-        model_2 = LSTM(units = SEQUENCE_LENGTH, dropout_W=0.2, dropout_U=0.2,
-                         return_sequences=True )(input_2)
-        model_2 = LSTM(32, dropout_W=0.2, dropout_U=0.2)(model_2)
-        model_3 = Concatenate(axis=-1)([model_1, model_2])
-        model_3 = Dense(32)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(16)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(8)(model_3)
-        model_3 = PReLU()(model_3)
-        model_3 = Dropout(0.2)(model_3)
-        model_3 = BatchNormalization()(model_3)
-        model_3 = Dense(1)(model_3)
-        model_3 = Activation('sigmoid')(model_3)
-        return_model = Model(inputs=[input_1, input_2], outputs=model_3)
-        def mean_pred(y_true, y_pred):
-            return K.mean(y_pred)
+        layer1 = Concatenate(axis=-1)([layer12, layer21])
+        
+        layer2 = Dense(16)(layer1)
+        layer3 = Dense(4)(layer2)
+        layer4 = Dense(1)(layer3)
+        
+        output_layer = Activation('sigmoid')(layer4)
+        return_model = Model(inputs=[input_layer1, input_layer2], outputs=output_layer)
+        
         return_model.compile(loss='binary_crossentropy',
                     optimizer='Adam',
                     metrics=['accuracy'])
-        self.return_model = return_model
+        
         return return_model
     
     # def main():
@@ -224,14 +110,15 @@ class CJ_Predictor:
         urls, dt, y, tk = self.preprocess_data(model_update=True)
         
         models_to_test = [self.create_network(tk)]
-        models_to_test = [self.create_network(tk), self.create_network1(tk), self.create_network2(tk)]
+        # models_to_test = [self.create_network(tk)]
         
         for model_num, model in enumerate(models_to_test):
         
             cv_number = 0
-            for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=5, train_size=0.25, test_size=0.10).split(y,y):
+            auc = []
+            
+            for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=15, train_size=0.5, test_size=0.15, random_state=123).split(y,y):
                 
-                auc = []
                 cv_number += 1
                 print("Fitting Model (CV={}) train length = {}, test length = {}".format(cv_number, len(cv_train_index), len(cv_test_index)))
                 
@@ -240,8 +127,9 @@ class CJ_Predictor:
                 model.fit(train[0], train[1], epochs=1, batch_size=batch_size, shuffle = True)
                 
                 current_auc = roc_auc_score(test[1], model.predict(test[0]))
+                auc.append(current_auc)
                 
-            print("Model = {}, average AUC = {}, std AUC = {}".format(model_num, numpy.mean(auc), numpy.std(auc)))
+            print("Model = {}, average AUC = {:06.5f}, std AUC = {:06.5f}, [{:06.5f},{:06.5f}]".format(model_num, numpy.mean(auc), numpy.std(auc), numpy.min(auc), numpy.max(auc)))
             auc_mean.append(numpy.mean(auc))
             auc_std.append(numpy.std(auc))
             

@@ -45,13 +45,15 @@ def main():
     # Load Data
     cjp = CJ_Loader(spark)
     cjp.set_organization("57efd33d-aaa5-409d-89ce-ff29a86d78a5")
-    # cjp.load_cj(ts_from=(2010,12,10), ts_to=(2020,12,12))
-    cjp.load_cj(ts_from=(2018,12,1), ts_to=(2018,12,31))
+    cjp.load_cj(ts_from=(2010,12,10), ts_to=(2020,12,12))
+    # cjp.load_cj(ts_from=(2018,12,1), ts_to=(2018,12,31))
     # cjp.cj_stats(ts_from=(2010,12,1), ts_to=(2020,12,31))
     cjp.cj_data.createOrReplaceTempView('cj')
     cjp.extract_attributes()
     cjp.process_attributes(features_mode="seq", split_mode="all")
     data = cjp.cj_dataset
+    
+    # data.to_parquet(wd+"/data_export.parquet")
     
     # Sample Dataset to Reduce Processing Time
     # if arg_sample_rate != 1.0:
