@@ -23,4 +23,5 @@ PYSPARK_PYTHON=./venv/bin/python spark2-submit --master yarn --deploy-mode clust
  --files schema.avsc \
  --py-files "cj_loader.py,cj_predictor.py,cj_export.py" \
  --name "analytic_attributes" \
+ --queue root.model.return_model \
  main.py send refit_auto 0.25
