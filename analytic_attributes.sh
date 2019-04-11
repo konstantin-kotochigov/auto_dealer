@@ -1,4 +1,4 @@
-export HADOOP_USER_NAME=hdfs
+export HADOOP_USER_NAME=dmpkit
 export SPARK_DIST_CLASSPATH=$(hadoop classpath)
 PYSPARK_PYTHON=./venv/bin/python spark2-submit --master yarn --deploy-mode cluster \
  --conf "spark.pyspark.virtualenv.enabled=true" \
