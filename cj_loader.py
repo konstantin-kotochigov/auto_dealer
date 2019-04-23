@@ -52,8 +52,7 @@ class CJ_Loader:
         time_to = int(time.mktime(datetime.datetime(ts_to[0], ts_to[1], ts_to[2]).timetuple())) * 1000
         cj_all = cj_all.filter('ts > {} and ts < {}'.format(time_from, time_to))
         cj_all.selectExpr("date(from_unixtime(ts/1000)) as ts").groupBy("ts").count().orderBy("ts").show(100)
-        cj_all.selectExpr("date(from_unixtime(min(ts/1000))) as max_ts","date(from_unixtime(max(ts/1000))) as min_ts","count(*) as cnt").show()
-        return -1
+        cj_all.selectExpr("date(from_unixtime(min(ts/1000))) as min_ts","date(from_unixtime(max(ts/1000))) as max_ts","count(*) as cnt").show()
     
     @staticmethod
     def cj_id(cj_ids, arg_id, arg_key=-1):
