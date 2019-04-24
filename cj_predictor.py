@@ -117,7 +117,7 @@ class CJ_Predictor:
             cv_number = 0
             auc = []
             
-            for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=15, train_size=0.5, test_size=0.15, random_state=123).split(y,y):
+            for cv_train_index, cv_test_index in StratifiedShuffleSplit(n_splits=10, train_size=0.5, test_size=0.15, random_state=123).split(y,y):
                 
                 cv_number += 1
                 print("Fitting Model (CV={}) train length = {}, test length = {}".format(cv_number, len(cv_train_index), len(cv_test_index)))
