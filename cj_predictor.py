@@ -151,7 +151,7 @@ class CJ_Predictor:
                 model = pickle.loads(reader.read())
         
         print("Scoring Data...")
-        pred = model.predict(scoring_data)
+        pred = model.predict(scoring_data, batch_size=batch_size)
         self.result = pandas.DataFrame({"fpc":self.input_data.fpc[self.input_data.target==0], "tpc":self.input_data.tpc[self.input_data.target==0], "return_score":pred.reshape(-1)})
         self.train_auc = round(roc_auc_score(train_data[1], model.predict(train_data[0], batch_size=batch_size)), 2)
         
