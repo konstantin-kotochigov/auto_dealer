@@ -5,7 +5,8 @@ PYSPARK_PYTHON=./venv/bin/python spark2-submit --master yarn --deploy-mode clust
  --conf "spark.pyspark.virtualenv.type=native" \
  --conf "spark.pyspark.virtualenv.bin.path=./venv/bin" \
  --conf "spark.pyspark.python=./venv/bin/python" \
- --jars "spark-avro_2.11-3.2.0.jar" \
+ --jars "spark-avro_2.11-3.2.0.jar,postgres_jdbc.jar" \
+ --driver-class-path "postgres_jdbc.jar" \
  --archives venv.zip#venv \
  --conf "spark.executor.memory=2g" \
  --conf "spark.dynamicAllocation.enabled=True" \
