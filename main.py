@@ -108,33 +108,34 @@ def main():
     
     # Store Run Metadata
     log_data = {
-        "dt":datetime.datetime.today().strftime('%Y-%m-%d %H-%m'),
-        "loaded_rows":str(cjp.cj_data_rows),
-        "extracted_rows":str(cjp.cj_df_rows),
-        "processed_rows":str(cjp.cj_dataset_rows),
-        "refit_flag":str(model_needs_update),
-        "send_to_prod_flag":str(send_update),
-        "processing_time":str(round((start_fitting - start_processing)/60, 2)),
-        "fitting_time":str(round((finish_fitting - start_fitting)/60, 2)),
-        "target_rate":0.05,
-        "train_auc":str(predictor.train_auc),
-        "test_auc":str(predictor.test_auc),
-        "test_auc_std":str(predictor.test_auc_std),
-        "test_auc_lb":str(predictor.test_auc) - str(predictor.test_auc_std),
-        "test_auc_ub":str(predictor.test_auc) + str(predictor.test_auc_std),
-        "q1":str(scoring_distribution[0]),
-        "q2":str(scoring_distribution[1]),
-        "q3":str(scoring_distribution[2]),
-        "q4":str(scoring_distribution[3]),
-        "q5":str(scoring_distribution[4]),
+        "dt":[datetime.datetime.today().strftime('%Y-%m-%d %H-%m-%S')],
+        "loaded_rows":[cjp.cj_data_rows],
+        "extracted_rows":[cjp.cj_df_rows],
+        "processed_rows":[cjp.cj_dataset_rows],
+        "refit_flag":[model_needs_update],
+        "send_to_prod_flag":[send_update],
+        "processing_time":[round((start_fitting - start_processing)/60, 2)],
+        "fitting_time":[round((finish_fitting - start_fitting)/60, 2)],
+        "target_rate":[0.05],
+        "train_auc":[predictor.train_auc],
+        "test_auc":[predictor.test_auc[0]],
+        "test_auc_std":[predictor.test_auc_std[0]],
+        "test_auc_lb":[predictor.test_auc[0] - predictor.test_auc_std[0]],
+        "test_auc_ub":[predictor.test_auc[0] + predictor.test_auc_std[0]],
+        "q1":[scoring_distribution[0]],
+        "q2":[scoring_distribution[1]],
+        "q3":[scoring_distribution[2]],
+        "q4":[scoring_distribution[3]],
+        "q5":[scoring_distribution[4]]
     }
     # log = ";".join(log_data)
     
     # log_path = wd+"log/log.csv"
     
-    df = spark.createDataFrame(pandas.DataFrame(log_data)).withColumn("dt",df.dt.astype("Date"))
+    df = spark.createDataFrame(pandas.DataFrame(log_data))
+    df=df.withColumn("dt",df.dt.astype("Date"))
     
-    df.write.jdbc(url="jdbc:postgresql://bmw-prod-mn1:5432/analytics_monitoring", table="model_stats_1", mode="append", properties = {"password":"liquibase", "user":"liquibase"})
+    df.write.jdbc(url="jdbc:postgresql://bmw-prod-mn1:5432/analytics_monitoring", table="model_stats", mode="append", properties = {"password":"liquibase", "user":"liquibase"})
     
     # if "log.csv" not in hdfs_client.list(wd+"log/"):
     #     data_with_header = 'dt;loaded_rows;extracted_rows;processed_rows;refit_flag;send_to_prod_flag;processing_time;fitting_time;train_auc;test_auc;test_auc_std;q1;q2;q3;q4;q5\n'+log + "\n"

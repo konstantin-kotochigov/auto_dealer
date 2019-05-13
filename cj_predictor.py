@@ -130,8 +130,11 @@ class CJ_Predictor:
                 auc.append(current_auc)
                 
             print("Model = {}, average AUC = {:06.5f}, std AUC = {:06.5f}, [{:06.5f},{:06.5f}]".format(model_num, numpy.mean(auc), numpy.std(auc), numpy.min(auc), numpy.max(auc)))
-            auc_mean.append(numpy.mean(auc))
-            auc_std.append(numpy.std(auc))
+            auc_mean.append(round(numpy.mean(auc), 5))
+            auc_std.append(round(numpy.std(auc), 5))
+            
+            self.test_auc = auc_mean
+            self.test_auc_std = auc_std
             
         return (auc_mean, auc_std)
     
