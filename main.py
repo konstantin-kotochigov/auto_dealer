@@ -4,12 +4,11 @@ from hdfs import InsecureClient
 
 import time
 import datetime
+import pandas
 
 from cj_loader import CJ_Loader
 from cj_predictor import CJ_Predictor
 from cj_export import CJ_Export
-
-
 
 def main():
     
@@ -72,8 +71,6 @@ def main():
     print("Got Result Table with Rows = {}".format(result.shape[0]))
     print("Score Distribution = \n{}".format(scoring_distribution))
     
-    
-    
     # Make Delta
     df = spark.createDataFrame(result)
     dm = CJ_Export("57efd33d-aaa5-409d-89ce-ff29a86d78a5", "model_update", "http://159.69.60.71:50070", "schema.avsc")
@@ -110,35 +107,43 @@ def main():
     finish_fitting = time.time()
     
     # Store Run Metadata
-    log_data = [datetime.datetime.today().strftime('%Y-%m-%d %H-%m'),
-        str(cjp.cj_data_rows),
-        str(cjp.cj_df_rows),
-        str(cjp.cj_dataset_rows),
-        str(model_needs_update),
-        str(send_update),
-        str(round((start_fitting - start_processing)/60, 2)),
-        str(round((finish_fitting - start_fitting)/60, 2)),
-        str(predictor.train_auc),
-        str(predictor.test_auc),
-        str(predictor.test_auc_std),
-        str(scoring_distribution[0]),
-        str(scoring_distribution[1]),
-        str(scoring_distribution[2]),
-        str(scoring_distribution[3]),
-        str(scoring_distribution[4])
-    ]
-    log = ";".join(log_data)
+    log_data = {
+        "dt":datetime.datetime.today().strftime('%Y-%m-%d %H-%m'),
+        "loaded_rows":str(cjp.cj_data_rows),
+        "extracted_rows":str(cjp.cj_df_rows),
+        "processed_rows":str(cjp.cj_dataset_rows),
+        "refit_flag":str(model_needs_update),
+        "send_to_prod_flag":str(send_update),
+        "processing_time":str(round((start_fitting - start_processing)/60, 2)),
+        "fitting_time":str(round((finish_fitting - start_fitting)/60, 2)),
+        "target_rate":0.05,
+        "train_auc":str(predictor.train_auc),
+        "test_auc":str(predictor.test_auc),
+        "test_auc_std":str(predictor.test_auc_std),
+        "test_auc_lb":str(predictor.test_auc) - str(predictor.test_auc_std),
+        "test_auc_ub":str(predictor.test_auc) + str(predictor.test_auc_std),
+        "q1":str(scoring_distribution[0]),
+        "q2":str(scoring_distribution[1]),
+        "q3":str(scoring_distribution[2]),
+        "q4":str(scoring_distribution[3]),
+        "q5":str(scoring_distribution[4]),
+    }
+    # log = ";".join(log_data)
     
-    log_path = wd+"log/log.csv"
+    # log_path = wd+"log/log.csv"
     
-    if "log.csv" not in hdfs_client.list(wd+"log/"):
-        data_with_header = 'dt;loaded_rows;extracted_rows;processed_rows;refit;send_to_prod;processing_time;fitting_time;train_auc;test_auc;test_auc_std;q1;q2;q3;q4;q5\n'+log + "\n"
-        hdfs_client.write(log_path, data=bytes(data_with_header, encoding='utf8'), overwrite=True)
-    else:
-            with hdfs_client.read(log_path) as reader:
-                prev_log = reader.read()
-            new_log = prev_log + bytes(log + "\n", encoding='utf8')
-            hdfs_client.write(log_path, data=new_log, overwrite=True)
+    df = spark.createDataFrame(pandas.DataFrame(log_data)).withColumn("dt",df.dt.astype("Date"))
+    
+    df.write.jdbc(url="jdbc:postgresql://bmw-prod-mn1:5432/analytics_monitoring", table="model_stats_1", mode="append", properties = {"password":"liquibase", "user":"liquibase"})
+    
+    # if "log.csv" not in hdfs_client.list(wd+"log/"):
+    #     data_with_header = 'dt;loaded_rows;extracted_rows;processed_rows;refit_flag;send_to_prod_flag;processing_time;fitting_time;train_auc;test_auc;test_auc_std;q1;q2;q3;q4;q5\n'+log + "\n"
+    #     hdfs_client.write(log_path, data=bytes(data_with_header, encoding='utf8'), overwrite=True)
+    # else:
+    #         with hdfs_client.read(log_path) as reader:
+    #             prev_log = reader.read()
+    #         new_log = prev_log + bytes(log + "\n", encoding='utf8')
+    #         hdfs_client.write(log_path, data=new_log, overwrite=True)
         
 
 
